@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TopTop - توب توب</title>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --accent: #fd79a8;
+            --dark: #2d3436;
+            --light: #f5f6fa;
+            --gold: #f1c40f;
+            --diamond: #00cec9;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #1e1e2f;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 450px;
+            height: 100%;
+            max-height: 900px;
+            background: #22223b;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 0;
+        }
+        @media(min-width: 480px) {
+            .app-container {
+                border-radius: 30px;
+                height: 92vh;
+            }
+        }
+        /* الهيدر */
+        .header {
+            padding: 15px 20px;
+            background: rgba(34, 34, 59, 0.9);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .header h1 {
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
+        .wallet-badge {
+            background: rgba(255,255,255,0.1);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            gap: 10px;
+        }
+        /* المحتوى الرئيسي للتبويبات */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            padding: 15px;
+        }
+        .tab-pane {
+            display: none;
+            height: 100%;
+        }
+        .tab-pane.active {
+            display: flex;
+            flex-direction: column;
+        }
+        /* شريط التنقل السفلي 5 تبويبات */
+        .nav-bar {
+            height: 65px;
+            background: #1a1a2e;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #8c8c9e;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: 0.3s;
+        }
+        .nav-item.active {
+            color: var(--accent);
+        }
+        .nav-item span {
+            font-size: 1.2rem;
+            margin-bottom: 2px;
+        }
+        /* تصميم شاشة الغرفة الصوتية بـ 8 مقاعد */
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            padding: 10px 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        .seats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .seat {
+            background: rgba(255,255,255,0.05);
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 50%;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .seat.taken {
+            border: 2px solid var(--accent);
+            background: rgba(253, 121, 168, 0.1);
+        }
+        .seat img {
+            width: 70%;
+            height: 70%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .seat-number {
+            position: absolute;
+            bottom: 0;
+            background: var(--primary);
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 10px;
+        }
+        /* الألعاب والتفاعلات */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .game-card {
+            background: linear-gradient(135deg, #3a3a60, #22223b);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        /* أزرار وتحكم المالك */
+        .room-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: space-around;
+            margin-top: auto;
+            padding: 10px 0;
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-admin {
+            background: #e17055;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- الهيدر العلوي -->
+    <div class="header">
+        <h1 id="app-title">TopTop - الرئيسية</h1>
+        <div class="wallet-badge">
+            <span>🪙 <strong id="gold-count">5,420</strong></span>
+            <span>💎 <strong id="diamond-count">310</strong></span>
+        </div>
+    </div>
+
+    <!-- محتوى التطبيق (5 تبويبات) -->
+    <div class="content">
+        <!-- 1. تبويب التوب توب والألعاب -->
+        <div id="tab-toptop" class="tab-pane active">
+            <h3 style="margin-bottom: 15px;">🎮 الألعاب التفاعلية</h3>
+            <div class="games-grid">
+                <div class="game-card" onclick="openGame('عجلة الحظ')">
+                    <h4>🎡 عجلة الحظ</h4>
+                    <p style="font-size: 0.8rem; color: #a29bfe; margin-top: 5px;">اربح أضعاف الذهب</p>
+                </div>
+                <div class="game-card" onclick="openGame('لعبة الكيرم')">
+                    <h4>🎯 الكيرم الجماعي</h4>
+                    <p style="font-size: 0.8rem; color: #a29bfe; margin-top: 5px;">تحدى الأصدقاء</p>
+                </div>
+                <div class="game-card" onclick="openGame('لعبة الأونو')">
+                    <h4>🃏 أونو سريعة</h4>
+                    <p style="font-size: 0.8rem; color: #a29bfe; margin-top: 5px;">حماس ومتعة</p>
+                </div>
+                <div class="game-card" onclick="openGame('البطولات')">
+                    <h4>🏆 بطولات توب توب</h4>
+                    <p style="font-size: 0.8rem; color: #a29bfe; margin-top: 5px;">جوائز كبرى</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. تبويب غرف الدردشة الصوتية (غرفة الـ 8 مقاعد) -->
+        <div id="tab-rooms" class="tab-pane">
+            <div class="room-header">
+                <div>
+                    <h3>🎙️ غرفة السهرة الملكية</h3>
+                    <p style="font-size: 0.75rem; color: #00cec9;">المالك: أحمد (ID: 1002)</p>
+                </div>
+                <button class="btn btn-admin" onclick="openOwnerPanel()">إدارة المالك ⚙️</button>
+            </div>
+
+            <!-- شبكة المقاعد الـ 8 -->
+            <div class="seats-grid">
+                <div class="seat taken" onclick="toggleSeat(1)"><img src="https://i.imgur.com/8Km9tLL.png" alt="S1"><span class="seat-number">S1</span></div>
+                <div class="seat taken" onclick="toggleSeat(2)"><img src="https://i.imgur.com/8Km9tLL.png" alt="S2"><span class="seat-number">S2</span></div>
+                <div class="seat" onclick="toggleSeat(3)"><span class="seat-number">3</span></div>
+                <div class="seat" onclick="toggleSeat(4)"><span class="seat-number">4</span></div>
+                <div class="seat" onclick="toggleSeat(5)"><span class="seat-number">5</span></div>
+                <div class="seat" onclick="toggleSeat(6)"><span class="seat-number">6</span></div>
+                <div class="seat" onclick="toggleSeat(7)"><span class="seat-number">7</span></div>
+                <div class="seat" onclick="toggleSeat(8)"><span class="seat-number">8</span></div>
+            </div>
+
+            <div class="room-controls">
+                <button class="btn" onclick="toggleMic()">🎤 فتح/كتم المايك</button>
+                <button class="btn" onclick="sendGiftModal()" style="background: #fd79a8;">🎁 إرسال هدية</button>
+            </div>
+        </div>
+
+        <!-- 3. تبويب المنشورات -->
+        <div id="tab-posts" class="tab-pane">
+            <h3>📢 مجتمع توب توب</h3>
+            <p style="color: #a29bfe; margin-top: 10px; font-size: 0.9rem;">شاهد أحدث منشورات الأصدقاء ولحظاتهم المميزة داخل الغرف والألعاب.</p>
+        </div>
+
+        <!-- 4. تبويب الرسائل -->
+        <div id="tab-chats" class="tab-pane">
+            <h3>💬 الرسائل الخاصة</h3>
+            <p style="color: #a29bfe; margin-top: 10px; font-size: 0.9rem;">لا توجد رسائل جديدة حالياً. ابدأ المحادثة مع أصدقائك!</p>
+        </div>
+
+        <!-- 5. تبويب الملف الشخصي (البروفايل) -->
+        <div id="tab-profile" class="tab-pane" style="align-items: center; text-align: center; padding-top: 20px;">
+            <img src="https://i.imgur.com/8Km9tLL.png" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--accent); margin-bottom: 10px;">
+            <h3>محمد الملكي</h3>
+            <p style="font-size: 0.8rem; color: #a29bfe;">TopTop ID: 985623</p>
+            <div style="background: rgba(255,255,255,0.05); width: 100%; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: right;">
+                <p>⭐ المستوى: <strong>VIP 7</strong></p>
+                <p style="margin-top: 8px;">🎁 الهدايا المستلمة: <strong>14,200</strong></p>
+                <p style="margin-top: 8px;">🏠 غرفتي الخاصة: <strong>نشطة</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- شريط التنقل السفلي (5 تبويبات مطابقة تماماً) -->
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchTab(0, 'TopTop - الرئيسية')">
+            <span>🎮</span>توب توب
+        </div>
+        <div class="nav-item" onclick="switchTab(1, 'غرفة الدردشة الصوتية')">
+            <span>🎙️</span>الغرف
+        </div>
+        <div class="nav-item" onclick="switchTab(2, 'مجتمع المنشورات')">
+            <span>📰</span>المنشورات
+        </div>
+        <div class="nav-item" onclick="switchTab(3, 'الرسائل والمحادثات')">
+            <span>💬</span>الرسائل
+        </div>
+        <div class="nav-item" onclick="switchTab(4, 'الملف الشخصي')">
+            <span>👤</span>حسابي
+        </div>
+    </div>
+</div>
+
+<script>
+    // تبديل التبويبات بسلاسة
+    function switchTab(index, title) {
+        const panes = document.querySelectorAll('.tab-pane');
+        const items = document.querySelectorAll('.nav-item');
+        
+        panes.forEach((pane, i) => {
+            pane.classList.toggle('active', i === index);
+        });
+        items.forEach((item, i) => {
+            item.classList.toggle('active', i === index);
+        });
+        
+        document.getElementById('app-title').innerText = title;
+    }
+
+    // تفاعل الألعاب
+    function openGame(gameName) {
+        alert('جاري تشغيل ' + gameName + ' المتفاعلة داخل توب توب...');
+    }
+
+    // إدارة المالك والمشرفين
+    function openOwnerPanel() {
+        let action = prompt("لوحة إدارة المالك:\n1. قفل/فتح الغرفة\n2. تغيير الإعلان\n3. طرد عضو\nاختر رقم العملية:");
+        if(action) alert("تم تنفيذ العملية بنجاح عبر لوحة المشرفين.");
+    }
+
+    // التحكم بالمايك
+    let isMuted = false;
+    function toggleMic() {
+        isMuted = !isMuted;
+        alert(isMuted ? "تم كتم المايك الخاص بك 🔇" : "تم فتح المايك 🎙️");
+    }
+
+    // نظام الهدايا
+    function sendGiftModal() {
+        let gift = prompt("اختر الهدية للإرسال:\n1. سيارة فاخرة (500 ذهبة)\n2. كعكة عيد ميلاد (50 ذهبة)\n3. وردة (10 ذهب)\nادخل رقم الهدية:");
+        if(gift) {
+            alert("تم إرسال الهدية بنجاح ونقصت العملات من محفظتك!");
+        }
+    }
+
+    function toggleSeat(num) {
+        alert("الانضمام للمقعد رقم: " + num + " وتفعيل الاتصال الصوتي المباشر (Agora Engine)");
+    }
+</script>
+
+</body>
+</html>
