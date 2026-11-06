@@ -1,0 +1,427 @@
+'use client';
+import React, { useState, useEffect, useRef } from 'react';
+// البريد الإلكتروني المحدد للمالك
+const OWNER_EMAIL = 'Agd1279@icloud.com';
+interface Message {
+id: string;
+role: 'user' | 'model';
+text: string;
+image?: string;
+timestamp: string;
+}
+export default function AuraAIApp() {
+// حالة المستخدم والمالك
+const [userEmail, setUserEmail] = useState<string>(OWNER_EMAIL);
+const [isOwner, setIsOwner] = useState<boolean>(true);
+// حالة التبويب النشط
+const [activeTab, setActiveTab] = useState<'chat' | 'vision' | 'admin'>('chat');
+// حالات المحادثة
+const [messages, setMessages] = useState<Message[]>([
+{
+id: '1',
+role: 'model',
+text: 'أهلاً بك في تطبيق Aura AI. كيف يمكنني مساعدتك اليوم؟',
+timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+]);
+const [inputPrompt, setInputPrompt] = useState('');
+const [isLoading, setIsLoading] = useState(false);
+// حالات تحليل الصور (Vision)
+const [selectedImage, setSelectedImage] = useState<string | null>(null);
+const [imagePrompt, setImagePrompt] = useState('قم بتحليل هذه الصورة واستخراج التفاصيل المهمة منها.');
+const [visionResult, setVisionResult] = useState('');
+const chatEndRef = useRef<HTMLDivElement>(null);
+// التحقق من صلاحيات المالك
+useEffect(() => {
+if (userEmail.toLowerCase().trim() === OWNER_EMAIL.toLowerCase()) {
+setIsOwner(true);
+} else {
+setIsOwner(false);
+}
+}, [userEmail]);
+// التمرير التلقائي لأسفل الشات
+useEffect(() => {
+chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+}, [messages, isLoading]);
+// 1. إرسال المحادثة النصية للـ API
+const handleSendMessage = async () => {
+if (!inputPrompt.trim() || isLoading) return;
+const userMsg: Message = {
+id: Date.now().toString(),
+role: 'user',
+text: inputPrompt,
+timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+};
+setMessages(prev => [...prev, userMsg]);
+const currentInput = inputPrompt;
+setInputPrompt('');
+setIsLoading(true);
+try {
+const response = await fetch('/api/ai/chat', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+prompt: currentInput,
+userEmail: userEmail,
+history: messages.map(m => ({ role: m.role, text: m.text }))
+}),
+});
+const data = await response.json();
+const aiMsg: Message = {
+id: (Date.now() + 1).toString(),
+role: 'model',
+text: data.result || data.error || 'تم استلام الإجابة بنجاح.',
+timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+};
+setMessages(prev => [...prev, aiMsg]);
+} catch (err) {
+setMessages(prev => [
+...prev,
+{
+id: (Date.now() + 1).toString(),
+role: 'model',
+text: 'حدث خطأ في الاتصال بالسيرفر. يرجى التأكد من إعدادات المفتاح API.',
+timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+]);
+} finally {
+setIsLoading(false);
+}
+};
+// 2. معالجة رفع الصور
+const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+const file = e.target.files?.[0];
+if (file) {
+const reader = new FileReader();
+reader.onloadend = () => {
+setSelectedImage(reader.result as string);
+};
+reader.readAsDataURL(file);
+}
+};
+// 3. تحليل الصورة من خلال السيرفر
+const handleAnalyzeImage = async () => {
+if (!selectedImage || isLoading) return;
+setIsLoading(true);
+setVisionResult('');
+try {
+const response = await fetch('/api/ai/vision', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+image: selectedImage,
+prompt: imagePrompt
+}),
+});
+const data = await response.json();
+setVisionResult(data.result || data.error || 'تم تحليل الصورة بنجاح.');
+} catch (err) {
+setVisionResult('حدث خطأ أثناء معالجة تحليل الصورة.');
+} finally {
+setIsLoading(false);
+}
+};
+return (
+<div style={styles.container}>
+{/* الشريط العلوي (Header) */}
+<header style={styles.header}>
+<div style={styles.headerTitle}>
+<span style={{ fontSize: '20px' }}>⚡</span>
+<h1 style={styles.title}>Aura AI Platform</h1>
+</div>
+{isOwner && (
+<div style={styles.ownerBadge}>
+👑 المالك والمسؤول (Super Admin)
+</div>
+)}
+</header>
+{/* شريط التنقل بين الأقسام */}
+<nav style={styles.navBar}>
+<button
+style={activeTab === 'chat' ? styles.activeNavBtn : styles.navBtn}
+onClick={() => setActiveTab('chat')}
+>
+💬 المحادثة
+</button>
+<button
+style={activeTab === 'vision' ? styles.activeNavBtn : styles.navBtn}
+onClick={() => setActiveTab('vision')}
+>
+👁️ تحليل الصور (Vision)
+</button>
+<button
+style={activeTab === 'admin' ? styles.activeNavBtn : styles.navBtn}
+onClick={() => setActiveTab('admin')}
+>
+⚙️ لوحة التحكم {isOwner && '🔒'}
+</button>
+</nav>
+{/* محتوى قسم المحادثة */}
+{activeTab === 'chat' && (
+<main style={styles.mainContent}>
+<div style={styles.chatWindow}>
+{messages.map(msg => (
+<div
+key={msg.id}
+style={msg.role === 'user' ? styles.userBubbleContainer : styles.aiBubbleContainer}
+>
+<div style={msg.role === 'user' ? styles.userBubble : styles.aiBubble}>
+<p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{msg.text}</p>
+<span style={styles.timestamp}>{msg.timestamp}</span>
+</div>
+</div>
+))}
+{isLoading && (
+<div style={styles.aiBubbleContainer}>
+<div style={styles.aiBubble}>
+<p style={{ margin: 0, fontStyle: 'italic', color: '#888' }}>جاري التفكير والتوليد...</p>
+</div>
+</div>
+)}
+<div ref={chatEndRef} />
+</div>
+<div style={styles.inputArea}>
+<input
+type="text"
+placeholder="اكتب سؤالك أو أمرك هنا..."
+value={inputPrompt}
+onChange={e => setInputPrompt(e.target.value)}
+onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+style={styles.input}
+/>
+<button onClick={handleSendMessage} disabled={isLoading} style={styles.sendBtn}>
+إرسال
+</button>
+</div>
+</main>
+)}
+{/* محتوى قسم تحليل الصور /}
+{activeTab === 'vision' && (
+<main style={styles.mainContent}>
+<div style={styles.visionCard}>
+<h3>رفع صورة للتحليل الذكي</h3>
+<input type="file" accept="image/" onChange={handleImageUpload} style={{ marginBottom: '15px' }} />
+{selectedImage && (
+<div style={{ marginBottom: '15px' }}>
+<img src={selectedImage} alt="المعاينة" style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '8px' }} />
+</div>
+)}
+<input
+type="text"
+value={imagePrompt}
+onChange={e => setImagePrompt(e.target.value)}
+placeholder="اطلب ماذا تريد أن يحلل الذكاء في الصورة..."
+style={styles.input}
+/>
+<button onClick={handleAnalyzeImage} disabled={!selectedImage || isLoading} style={{ ...styles.sendBtn, marginTop: '10px', width: '100%' }}>
+{isLoading ? 'جاري التحليل...' : 'بدء التحليل البصري'}
+</button>
+{visionResult && (
+<div style={styles.resultBox}>
+<h4>نتيجة التحليل:</h4>
+<p style={{ whiteSpace: 'pre-wrap' }}>{visionResult}</p>
+</div>
+)}
+</div>
+</main>
+)}
+{/* محتوى قسم الإدارة والمالك */}
+{activeTab === 'admin' && (
+<main style={styles.mainContent}>
+<div style={styles.adminCard}>
+<h3>إعدادات وتراخيص التطبيق</h3>
+<div style={{ marginBottom: '20px' }}>
+<label style={{ display: 'block', marginBottom: '5px' }}>البريد الإلكتروني المسجل:</label>
+<input
+type="email"
+value={userEmail}
+onChange={e => setUserEmail(e.target.value)}
+style={styles.input}
+/>
+</div>
+{isOwner ? (
+<div style={styles.ownerControlBox}>
+<h4 style={{ color: '#2e7d32', marginTop: 0 }}>🟢 تم التحقق: أنت المالك الرسمي للمشروع</h4>
+<ul>
+<li>صلاحية التحكم الكاملة: مفعلة</li>
+<li>الوصول إلى مفاتيح الـ API: متاح</li>
+<li>إدارة نموذج Gemini 2.5/3.8 Flash: نشط</li>
+</ul>
+</div>
+) : (
+<div style={styles.userControlBox}>
+<h4 style={{ color: '#c62828', marginTop: 0 }}>🔴 حساب مستخدم عادي</h4>
+<p>سجل بالبريد الإلكتروني ⁠Agd1279@icloud.com⁠ للوصول لصلاحيات المالك.</p>
+</div>
+)}
+</div>
+</main>
+)}
+</div>
+);
+}
+const styles: { [key: string]: React.CSSProperties } = {
+container: {
+display: 'flex',
+flexDirection: 'column',
+height: '100vh',
+maxWidth: '900px',
+margin: '0 auto',
+fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+backgroundColor: '#f4f6f8',
+color: '#333',
+direction: 'rtl'
+},
+header: {
+display: 'flex',
+justifyContent: 'space-between',
+alignItems: 'center',
+padding: '15px 20px',
+backgroundColor: '#ffffff',
+borderBottom: '1px solid #e0e0e0'
+},
+headerTitle: {
+display: 'flex',
+alignItems: 'center',
+gap: '10px'
+},
+title: {
+fontSize: '20px',
+margin: 0,
+color: '#111'
+},
+ownerBadge: {
+backgroundColor: '#e8f5e9',
+color: '#2e7d32',
+padding: '6px 12px',
+borderRadius: '20px',
+fontSize: '13px',
+fontWeight: 'bold',
+border: '1px solid #a5d6a7'
+},
+navBar: {
+display: 'flex',
+backgroundColor: '#ffffff',
+borderBottom: '1px solid #e0e0e0',
+padding: '0 10px'
+},
+navBtn: {
+flex: 1,
+padding: '12px 5px',
+border: 'none',
+backgroundColor: 'transparent',
+fontSize: '14px',
+cursor: 'pointer',
+color: '#666',
+borderBottom: '2px solid transparent'
+},
+activeNavBtn: {
+flex: 1,
+padding: '12px 5px',
+border: 'none',
+backgroundColor: 'transparent',
+fontSize: '14px',
+cursor: 'pointer',
+color: '#0070f3',
+fontWeight: 'bold',
+borderBottom: '2px solid #0070f3'
+},
+mainContent: {
+flex: 1,
+display: 'flex',
+flexDirection: 'column',
+padding: '15px',
+overflowY: 'auto'
+},
+chatWindow: {
+flex: 1,
+overflowY: 'auto',
+padding: '10px',
+display: 'flex',
+flexDirection: 'column',
+gap: '12px'
+},
+userBubbleContainer: {
+display: 'flex',
+justifyContent: 'flex-start'
+},
+aiBubbleContainer: {
+display: 'flex',
+justifyContent: 'flex-end'
+},
+userBubble: {
+backgroundColor: '#0070f3',
+color: '#fff',
+padding: '12px 16px',
+borderRadius: '18px 18px 0px 18px',
+maxWidth: '75%'
+},
+aiBubble: {
+backgroundColor: '#ffffff',
+color: '#111',
+padding: '12px 16px',
+borderRadius: '18px 18px 18px 0px',
+maxWidth: '75%',
+border: '1px solid #e0e0e0'
+},
+timestamp: {
+display: 'block',
+fontSize: '10px',
+marginTop: '4px',
+opacity: 0.7,
+textAlign: 'left'
+},
+inputArea: {
+display: 'flex',
+gap: '10px',
+marginTop: '10px'
+},
+input: {
+flex: 1,
+padding: '12px',
+borderRadius: '8px',
+border: '1px solid #ccc',
+fontSize: '14px',
+outline: 'none'
+},
+sendBtn: {
+padding: '12px 20px',
+backgroundColor: '#0070f3',
+color: '#fff',
+border: 'none',
+borderRadius: '8px',
+fontWeight: 'bold',
+cursor: 'pointer'
+},
+visionCard: {
+backgroundColor: '#fff',
+padding: '20px',
+borderRadius: '12px',
+border: '1px solid #e0e0e0'
+},
+resultBox: {
+marginTop: '15px',
+padding: '15px',
+backgroundColor: '#f8f9fa',
+borderRadius: '8px',
+border: '1px solid #ddd'
+},
+adminCard: {
+backgroundColor: '#fff',
+padding: '20px',
+borderRadius: '12px',
+border: '1px solid #e0e0e0'
+},
+ownerControlBox: {
+backgroundColor: '#f1f8e9',
+padding: '15px',
+borderRadius: '8px',
+border: '1px solid #c8e6c9'
+},
+userControlBox: {
+backgroundColor: '#ffebee',
+padding: '15px',
+borderRadius: '8px',
+border: '1px solid #ffcdd2'
+}
+};
